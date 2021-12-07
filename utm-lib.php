@@ -139,4 +139,3 @@ function fixUTM_Array(&$sourceGroup, &$UTM_Array)
 
     $UTM_Array['RefererHost'] = $RefererHost;
 }
-  
