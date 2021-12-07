@@ -1,0 +1,7 @@
+
+DirectoryIndex index.html index.php
+Options -Indexes
+<filesMatch "configs.json$">
+order deny,allow 
+deny from all 
+</filesMatch>
