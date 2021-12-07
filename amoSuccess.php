@@ -2,9 +2,9 @@
 
 include 'amoConfig.php';
 
-use AmoIntegrations\AmoSettings as AmoSettings;
+use AmoIntegrations\AmoSettings;
 
-$amoSettings = new AmoSettings();
+$amoSettings = AmoSettings::getInstance();
 
 
 if (isset($_GET['client_id']) && $_GET['client_id'] === $amoSettings->client_id) {

@@ -1,11 +1,12 @@
 <?php
 error_reporting(E_ALL);
 
-include_once 'amoConfig.php';
+include_once __DIR__.'/amoConfig.php';
+include_once __DIR__.'/amoConfig.php';
 
-// use \AmoIntegrations\AmoSettings;
+ use \AmoIntegrations\AmoSettings;
 
-$amoSettings = new \AmoIntegrations\AmoSettings();
+$amoSettings =AmoSettings::getIntance();
 
 
 if (!isset($_GET['token']) || $_GET['token'] != $amoSettings->token) {
