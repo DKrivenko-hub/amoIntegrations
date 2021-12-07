@@ -14,8 +14,8 @@ class AmoSettings
     private $token = '';
 
     //settings for portal
-    private $contacts = '';
-    private $leads = '';
+    private $contacts = [];
+    private $leads = [];
 
     public $auth_token = '';
     public $access_token = '';
@@ -25,17 +25,19 @@ class AmoSettings
     public $expires_in = '';
     public $expires_date = '';
 
+    private static $instance = '';
 
 
-
-    public function __construct()
+    private function __construct()
     {
         $this->readConfigs();
     }
+
     function __get($name)
     {
         return $this->{$name};
     }
+
     function __set($name, $value)
     {
         user_error("Can't set property: " . __CLASS__ . "->$name");
@@ -45,18 +47,20 @@ class AmoSettings
     {
         $json = array();
         $reflect = new \ReflectionClass(__CLASS__);
-        $props   = $reflect->getProperties();
+        $props = $reflect->getProperties();
         foreach ($props as $prop) {
-            $json[$prop->getName()] = $this->{$prop->getName()};
+            if ($prop->getName() !== 'instance') {
+                $json[$prop->getName()] = $this->{$prop->getName()};
+            }
         }
         $json = json_encode($json);
 
-        file_put_contents(__DIR__. '/configs.json', $json);
+        file_put_contents(__DIR__ . '/configs.json', $json);
     }
 
     public function readConfigs()
     {
-        if (file_exists(__DIR__ .'/configs.json')) {
+        if (file_exists(__DIR__ . '/configs.json')) {
             $configs = file_get_contents(__DIR__ . '/configs.json');
             if ($configs) {
                 $configs = json_decode($configs, true);
@@ -74,6 +78,7 @@ class AmoSettings
             throw new ErrorException('configs.json not exists');
         }
     }
+
     public function setExpires(int $timestamp)
     {
 
@@ -81,11 +86,19 @@ class AmoSettings
         $this->expires_in = $timestamp;
     }
 
-    public function getPipeline(string $pipelineName)
+    public function getPipeline(string $pipelineName): array
     {
         if (isset($this->leads['pipeline'][$pipelineName])) {
             return $this->leads['pipeline'][$pipelineName];
         }
         return $this->leads['pipeline']['default'];
+    }
+
+    public static function getInstance()
+    {
+        if (self::$instance == null) {
+            self::$instance = new AmoSettings();
+        }
+        return self::$instance;
     }
 }

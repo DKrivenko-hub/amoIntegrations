@@ -1,8 +1,11 @@
 <?php
 include __DIR__ . '/amoConfig.php';
 
-function getAccessToken(&$amoSettings)
+use \AmoIntegrations\AmoSettings;
+
+function amo_getAccessToken()
 {
+    $amoSettings = AmoSettings::getInstance();
     $data = array(
         'client_id' => $amoSettings->client_id,
         'client_secret' => $amoSettings->client_secret,
@@ -19,26 +22,23 @@ function getAccessToken(&$amoSettings)
 
     $amoSettings->writeConfigs();
 }
-function curlRequest($action, array $data = array())
+
+function amo_curlRequest($action, array $data = array())
 {
-
-    $amoSettings = new \AmoIntegrations\AmoSettings();
-    // if (!isset($amoSettings->expires_date) || $amoSettings->expires_date < time()) {
-    getAccessToken($amoSettings);
-    // }
-
+    $amoSettings = AmoSettings::getInstance();
     $headers = [
         'Authorization: Bearer ' . $amoSettings->access_token,
         'Content-Type:application/json'
     ];
 
-    $response = curl($action, $headers, $amoSettings, $data);
+    $response = curl($action, $headers, $data);
     return $response['response'];
 }
 
 
-function curl($action, $headers, $amoSettings, $data = array())
+function amo_curl($action, $headers, $data = array())
 {
+    $amoSettings = AmoSettings::getInstance();
     $curl = curl_init(); //Сохраняем дескриптор сеанса cURL
     /** Устанавливаем необходимые опции для сеанса cURL  */
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
@@ -82,13 +82,13 @@ function curl($action, $headers, $amoSettings, $data = array())
     return array('response' => json_decode($out, true), 'code' => $code);
 }
 
-function SafeString($data, $limit = 0, $noTags = TRUE)
+function amo_SafeString($data, $limit = 0, $noTags = TRUE)
 {
-    $search  = array("\\\\",  "\\0",  "\\n",  "\\r",  "\Z",    "\'",  '\"',  '"',       "'");
-    $replace = array("\\",    "\0",   "\n",   "\r",   "\x1a",  "'",   '"',   '&quot;',  '&#039;');
+    $search = array("\\\\", "\\0", "\\n", "\\r", "\Z", "\'", '\"', '"', "'");
+    $replace = array("\\", "\0", "\n", "\r", "\x1a", "'", '"', '&quot;', '&#039;');
 
-    $search  = array("\\\\",  "\\0",  "\\n",  "\\r",  "\Z",    "\'",  '\"');
-    $replace = array("\\",    "\0",   "\n",   "\r",   "\x1a",  "'",   '"');
+    $search = array("\\\\", "\\0", "\\n", "\\r", "\Z", "\'", '\"');
+    $replace = array("\\", "\0", "\n", "\r", "\x1a", "'", '"');
 
     $data = Str_Replace($search, $replace, Trim($data));
 
@@ -104,11 +104,12 @@ function SafeString($data, $limit = 0, $noTags = TRUE)
     return Trim($data);
 }
 
-function formatPhone($phone)
+function amo_formatPhone($phone)
 {
     return preg_replace('~\D+~', '', $phone);
 }
-function ComparePhones($phone1, $phone2)
+
+function amo_ComparePhones($phone1, $phone2)
 {
     $phone1 = mb_substr(strrev(formatPhone($phone1)), 0, 10);
     $phone2 = mb_substr(strrev(formatPhone($phone2)), 0, 10);

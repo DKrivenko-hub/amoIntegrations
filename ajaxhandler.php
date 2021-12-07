@@ -3,17 +3,18 @@
 
 // $data = json_decode(file_get_contents("php://input"), true);
 $data = json_decode($_POST['form'], true);
-if(empty($data)){
+if (empty($data)) {
     $data = file_get_contents('php://input');
     parse_str(file_get_contents('php://input', $data));
     $data = json_decode($data, true);
 }
-file_put_contents(__DIR__.'/debug1.log', json_encode($data));
+file_put_contents(__DIR__ . '/forms.log', json_encode($data));
 
-// var_dump(($data));
-// exit;
 include __DIR__ . '/functions.php';
-$data['phone'] =  formatPhone($data['phone']);
+
+use AmoIntegrations\AmoSettings;
+
+$data['phone'] = amo_formatPhone($data['phone']);
 if (strlen($data['phone']) < 7) {
     echo 'short phone';
     return;
@@ -28,12 +29,18 @@ if (!isset($data['source_name']) || empty($data['source_name'])) {
     $data['source_name'] = 'FromSite';
 }
 if (!isset($data['textfields']['from_page']) || empty($data['textfields']['from_page'])) {
-    $data['textfields']['from_page'] = 'https://prostohouse.com/';
+    $data['textfields']['from_page'] = $_SERVER['SERVER_NAME'];
 }
 
 if (!isset($data['form_name']) || empty($data['form_name'])) {
     $data['form_name'] = 'Callback';
 }
+
+$responsible_user_id = 0;
+if (isset($data['responsible_user_id']) && !empty($data['responsible_user_id'])) {
+    $responsible_user_id = (int)$data['responsible_user_id'];
+}
+
 
 if (!isset($data['values'])) {
     $data['values'] = array(
@@ -43,17 +50,17 @@ if (!isset($data['values'])) {
     );
 }
 
-// include_once __DIR__ . '/utm-lib.php';
+
 if (empty($data['utm'])) {
     $UTM_Array = $_SESSION;
+} else {
+    $UTM_Array = $data['utm'];
 }
-
-$UTM_Array = $data['utm'];
 
 
 if (!empty($data) && isset($data['values'])) {
 
-    $amoSettings = new \AmoIntegrations\AmoSettings();
+    $amoSettings = AmoSettings::getInstance();
 
     if (!empty($UTM_Array)) {
         foreach ($amoSettings->leads['cfv']['textfields'] as $k => $v) {
@@ -73,10 +80,10 @@ if (!empty($data) && isset($data['values'])) {
     $continfo = 0;
 
     if (isset($data['company_name'])) {
-        $data['company_name'] = SafeString($data['company_name']);
+        $data['company_name'] = amo_SafeString($data['company_name']);
         $action = '/api/v4/companies?query=' . $data['company_name'];
 
-        $response = curlRequest($action);
+        $response = amo_curlRequest($action);
         if ($response) {
             foreach ($response['_embedded']['companies'] as $item) {
                 if ($item['name'] === $data['company_name']) {
@@ -93,7 +100,7 @@ if (!empty($data) && isset($data['values'])) {
                     'name' => $data['company_name'],
                 )
             );
-            $response = curlRequest($action, $amo_data);
+            $response = amo_curlRequest($action, $amo_data);
             if ($response) {
                 $company_id = $response['_embedded']['companies'][0]['id'];
             }
@@ -102,7 +109,7 @@ if (!empty($data) && isset($data['values'])) {
 
     $action = '/api/v4/contacts?query=' . $data['values']['phone'];
 
-    $response = curlRequest($action);
+    $response = amo_curlRequest($action);
 
     if ($response) {
         foreach ($response['_embedded']['contacts'] as $item) {
@@ -110,7 +117,7 @@ if (!empty($data) && isset($data['values'])) {
                 foreach ($item['custom_fields_values'] as $cfv) {
                     if ($cfv['field_id'] == $amoSettings->contacts['phone_id']) {
                         foreach ($cfv['values'] as $v) {
-                            if (ComparePhones($v['value'], $data['values']['phone'])) {
+                            if (amo_ComparePhones($v['value'], $data['values']['phone'])) {
                                 $contact_id = $item['id'];
                                 $continfo = array($item);
                                 break 3;
@@ -132,22 +139,37 @@ if (!empty($data) && isset($data['values'])) {
 
     if (!$contact_id) {
         $amo_data = array();
-        $amo_data[0]['name'] = ($data['values']['name'] ? $data['values']['name'] : $data['values']['phone']);
-        $amo_data[0]['custom_fields_values'] = array(
-            array(
-                'field_id' => (int)$amoSettings->contacts['phone_id'],
-                'values' => array(
-                    array(
-                        'value' =>  $data['values']['phone']
+        if ($responsible_user_id) {
+            $amo_data[0]['responsible_user_id'] = $responsible_user_id;
+        }
+        $amo_data[0]['name'] = ($data['values']['name'] ?? $data['values']['phone']);
+        $amo_data[0]['custom_fields_values'] = array();
+        foreach ($amoSettings->contacts as $key => $id) {
+            if (isset($data['values'][$key]) && !empty($data['values'][$key])) {
+                $amo_data[0]['custom_fields_values'][] = array(
+                    'field_id' => (int)$id,
+                    'values' => array(
+                        array(
+                            'value' => $data['values'][$key]
+                        )
                     )
-                )
-            )
-        );
+                );
+            } else if (isset($data[$key]) && !empty($data[$key])) {
+                $amo_data[0]['custom_fields_values'][] = array(
+                    'field_id' => (int)$id,
+                    'values' => array(
+                        array(
+                            'value' => $data[$key]
+                        )
+                    )
+                );
+            }
+        }
         if ($company_id) {
             $amo_data[0]['_embedded']['companies'][0]['id'] = $company_id;
         }
 
-        $response = curlRequest('/api/v4/contacts', $amo_data);
+        $response = amo_curlRequest('/api/v4/contacts', $amo_data);
 
         $contact_id = $response['_embedded']['contacts'][0]['id'];
         $continfo = $response['_embedded']['contacts'];
@@ -161,15 +183,16 @@ if (!empty($data) && isset($data['values'])) {
                     'to_entity_type' => 'contacts'
                 ),
             );
-            $response = curlRequest($action, $amo_data);
+            $response = amo_curlRequest($action, $amo_data);
         }
     }
 
 
-
     //lead
     $leads_data = array();
-    $leads_data[0]['name'] = ($data['values']['name'] ? $data['values']['name'] . ' ' . $data['values']['phone'] : $data['values']['phone']);
+    $leads_data[0]['name'] = ($data['values']['name'] ?
+        $data['values']['name'] . ' ' . $data['values']['phone'] :
+        $data['values']['phone']);
 
     $leads_data[0]['pipeline_id'] = (int)$pipeline['pipeline_id'];
 
@@ -189,7 +212,7 @@ if (!empty($data) && isset($data['values'])) {
             }
 
             foreach ($cflds as $f_name => $f_id) {
-                if (isset($data[$field_type][$f_name]) &&  !empty($data[$field_type][$f_name])) {
+                if (isset($data[$field_type][$f_name]) && !empty($data[$field_type][$f_name])) {
                     if ($value_key == 'enum_id') {
                         $data[$field_type][$f_name] = (int)$data[$field_type][$f_name];
                     }
@@ -210,17 +233,32 @@ if (!empty($data) && isset($data['values'])) {
     }
 
 
-
-
     //check tags
-
-    $leads_data[0]['_embedded'] = array(
-        'tags' => array(
-            array(
-                'name' => 'Завяка с сайта'
+    if (isset($data['tag_name'])) {
+        if (is_array($data['tag_name'])) {
+            foreach ($data['tag_name'] as $tag) {
+                $leads_data[0]['_embedded']['tags'][] = array(
+                    'name' => $tag
+                );
+            }
+        } else {
+            $leads_data[0]['_embedded'] = array(
+                'tags' => array(
+                    array(
+                        'name' => $data['tag_name']
+                    )
+                )
+            );
+        }
+    } else {
+        $leads_data[0]['_embedded'] = array(
+            'tags' => array(
+                array(
+                    'name' => 'заявка с Сайта'
+                )
             )
-        )
-    );
+        );
+    }
 
 
     $action = '/api/v4/leads';
@@ -248,7 +286,7 @@ if (!empty($data) && isset($data['values'])) {
     } else {
         $amo_data[0]['status_id'] = $pipeline['status_id'];
     }
-    $response = curlRequest($action, $amo_data);
+    $response = amo_curlRequest($action, $amo_data);
 
     if ($pipeline['status_id']) {
         $lead_id = $response['_embedded']['leads'][0]['id'];
@@ -257,7 +295,7 @@ if (!empty($data) && isset($data['values'])) {
         $amo_data = array();
         $amo_data[0]['to_entity_id'] = $contact_id;
         $amo_data[0]['to_entity_type'] = 'contacts';
-        $response = curlRequest($action, $amo_data);
+        $response = amo_curlRequest($action, $amo_data);
     } else {
         $lead_id = $response['_embedded']['unsorted'][0]['_embedded']['leads'][0]['id'];
     }
@@ -284,7 +322,7 @@ if (!empty($data) && isset($data['values'])) {
                     )
                 )
             );
-            $response = curlRequest('/api/v4/leads/notes ', $amo_data);
+            $response = amo_curlRequest('/api/v4/leads/notes ', $amo_data);
         }
     }
 
@@ -293,3 +331,31 @@ if (!empty($data) && isset($data['values'])) {
     $log .= "\r\n\r\n\r\n";
     file_put_contents(__DIR__ . '/successSend.log', $log, FILE_APPEND);
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+
+//tasks
+/*
+    $lead = curlRequest('/api/v4/leads/' . $update_lead_id);
+
+    $note = 'Новая заявка. Форма - ' . $data['form_name'];
+
+    if (empty($lead)) return;
+
+    $responsible_user_id = (int)$lead['responsible_user_id'];
+
+
+    $amo_data = array(
+        array(
+            // 'responsible_user_id'=> $responsible_user_id,
+            'entity_id' => $update_lead_id,
+            'entity_type' => 'leads',
+            'text' => 'Новая заявка с сайта',
+            'task_type_id' => 1,
+            'complete_till' => strtotime('+1 days')
+        )
+    );
+    $response = curlRequest('/api/v4/tasks', $amo_data);
+
+*/
