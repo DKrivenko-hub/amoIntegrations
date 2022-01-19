@@ -12,7 +12,7 @@ function amo_getAccessToken()
         'grant_type' => 'refresh_token',
         'refresh_token' => $amoSettings->refresh_token,
     );
-    $response = curl('/oauth2/access_token', array('Content-Type:application/json'), $amoSettings, $data);
+    $response = amo_curl('/oauth2/access_token', array('Content-Type:application/json'), $data);
 
     $amoSettings->refresh_token = $response['response']['refresh_token'];
     $amoSettings->access_token = $response['response']['access_token'];
