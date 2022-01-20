@@ -1,15 +1,15 @@
 <?php
 
-include 'amoConfig.php';
+include 'init.php';
 
 use AmoIntegrations\AmoSettings;
 
 $amoSettings = AmoSettings::getInstance();
 
-
 if (isset($_GET['client_id']) && $_GET['client_id'] === $amoSettings->client_id) {
 
     if (isset($_GET['code'])) {
+ 
         $amoSettings->auth_token = $_GET['code'];
 
         $data = array(
@@ -17,11 +17,11 @@ if (isset($_GET['client_id']) && $_GET['client_id'] === $amoSettings->client_id)
             "client_secret" => $amoSettings->client_secret,
             "grant_type" => "authorization_code",
             "code" => $amoSettings->auth_token,
-            "redirect_uri" => "https://" . $_SERVER['HTTP_HOST'] . "/amoIntegrations/amoSuccess.php"
+            "redirect_uri" => "https://" . $_SERVER['HTTP_HOST'] . "/amoIntegrations/amoSuccess.php?domain=$domain"
         );
 
-        $curl = curl_init(); 
-      
+        $curl = curl_init();
+
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_USERAGENT, 'amoCRM-oAuth-client/1.0');
         curl_setopt($curl, CURLOPT_URL, $amoSettings->amo_portal . '/oauth2/access_token');
@@ -34,7 +34,7 @@ if (isset($_GET['client_id']) && $_GET['client_id'] === $amoSettings->client_id)
         $out = curl_exec($curl);
         $code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         curl_close($curl);
-    
+var_dump($out);
         $code = (int)$code;
         $errors = [
             400 => 'Bad request',
@@ -55,7 +55,7 @@ if (isset($_GET['client_id']) && $_GET['client_id'] === $amoSettings->client_id)
         }
 
         $response = json_decode($out);
-      
+
         $amoSettings->refresh_token = $response->refresh_token;
         $amoSettings->access_token = $response->access_token;
         $amoSettings->token_type = $response->token_type;
@@ -65,6 +65,7 @@ if (isset($_GET['client_id']) && $_GET['client_id'] === $amoSettings->client_id)
     }
     else{
         echo 'empty code';
+        exit;
     }
 
 

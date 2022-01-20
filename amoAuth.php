@@ -1,18 +1,21 @@
 <?php
-error_reporting(E_ALL);
+include_once 'init.php';
 
-include_once __DIR__.'/amoConfig.php';
-include_once __DIR__.'/amoConfig.php';
+use \AmoIntegrations\AmoSettings;
 
- use \AmoIntegrations\AmoSettings;
+$amoSettings = AmoSettings::getInstance();
 
-$amoSettings =AmoSettings::getIntance();
+if (empty($amoSettings)) {
+    echo 'Wrong configs';
+    exit;
+}
 
 
 if (!isset($_GET['token']) || $_GET['token'] != $amoSettings->token) {
-    echo 'incorrect Token';
+    echo 'Incorrect token';
     exit;
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -33,10 +36,11 @@ if (!isset($_GET['token']) || $_GET['token'] != $amoSettings->token) {
         button.addEventListener('click', (event) => {
             amoAuth();
         });
-        
+
         function amoAuth() {
             var popup;
             auth();
+
             function auth() {
                 popup = window.open('https://www.amocrm.ru/oauth?client_id=<?php echo $amoSettings->client_id; ?>&mode=post_message', 'Предоставить доступ', 'scrollbars, status, resizable, width=750, height=580');
             }

@@ -1,8 +1,7 @@
 <?php
 
-namespace AmoIntegrations;
 
-use ErrorException;
+namespace AmoIntegrations;
 
 class AmoSettings
 {
@@ -14,30 +13,34 @@ class AmoSettings
     private $token = '';
 
     //settings for portal
-    private $contacts = [];
-    private $leads = [];
+    private $contacts = '';
+    private $leads = array();
+    private $notes = '';
 
     public $auth_token = '';
     public $access_token = '';
     public $refresh_token = '';
     public $token_type = '';
 
+    private $path = '';
+
     public $expires_in = '';
     public $expires_date = '';
 
-    private static $instance = '';
+    private static $instance;
 
-
-    private function __construct()
+    public function __construct($path = '')
     {
+        global $domain;
+        $this->path = $path ?? AMO_INTEGRATIONS_PATH . '/' . $domain . '/amoConfigs.json';
         $this->readConfigs();
     }
-
     function __get($name)
     {
-        return $this->{$name};
+        if ($name !== 'instance') {
+            return $this->{$name};
+        }
     }
-
     function __set($name, $value)
     {
         user_error("Can't set property: " . __CLASS__ . "->$name");
@@ -47,58 +50,73 @@ class AmoSettings
     {
         $json = array();
         $reflect = new \ReflectionClass(__CLASS__);
-        $props = $reflect->getProperties();
+        $props   = $reflect->getProperties();
         foreach ($props as $prop) {
-            if ($prop->getName() !== 'instance') {
+            if ($prop->getName() !== 'instance' && $prop->getName() !== 'path') {
                 $json[$prop->getName()] = $this->{$prop->getName()};
             }
         }
         $json = json_encode($json);
 
-        file_put_contents(__DIR__ . '/configs.json', $json);
+        file_put_contents($this->path, $json);
     }
 
     public function readConfigs()
     {
-        if (file_exists(__DIR__ . '/configs.json')) {
-            $configs = file_get_contents(__DIR__ . '/configs.json');
+
+        if (file_exists($this->path)) {
+            $configs = file_get_contents($this->path);
             if ($configs) {
                 $configs = json_decode($configs, true);
                 if ($configs) {
                     foreach ($configs as $name => $val) {
-                        $this->{$name} = $val;
+                        if ($val) {
+                            $this->{$name} = $val;
+                        } else {
+                            $this->{$name} = array();
+                        }
                     }
-                } else {
-                    throw new ErrorException('empty configs');
                 }
-            } else {
-                throw new ErrorException('can`t read configs');
             }
-        } else {
-            throw new ErrorException('configs.json not exists');
         }
     }
-
     public function setExpires(int $timestamp)
     {
 
-        $this->expires_date = strtotime((new \DateTime('+' . $timestamp . ' seconds'))->format('d.m.Y H:i:s'));
+        $this->expires_date = strtotime((new \DateTime('+' . $timestamp . 'seconds'))->format('d.m.Y H:i:s'));
         $this->expires_in = $timestamp;
     }
 
-    public function getPipeline(string $pipelineName): array
+    public function getPipeline(string $pipelineName)
     {
         if (isset($this->leads['pipeline'][$pipelineName])) {
             return $this->leads['pipeline'][$pipelineName];
         }
         return $this->leads['pipeline']['default'];
     }
-
-    public static function getInstance()
+    public function setPipeline(int $pipelineId, $pipeline_stage = 0, string $pipelineName = '')
     {
-        if (self::$instance == null) {
-            self::$instance = new AmoSettings();
+        if ($pipelineId > 1) {
+            if (!$pipelineName) {
+                $pipelineName = 'default';
+            }
+            // var_dump($this->leads);
+            $this->leads['pipeline'][$pipelineName] = array(
+                'status_id' => $pipeline_stage,
+                'pipeline_id' => $pipelineId
+            );
+        }
+    }
+
+    public static function getInstance($path = '')
+    {
+        if (empty(self::$instance)) {
+            self::$instance = new AmoSettings($path);
         }
         return self::$instance;
+    }
+    public function destruct()
+    {
+        self::$instance = NULL;
     }
 }
