@@ -13,8 +13,12 @@ class Contacts extends Model
     public function find(string $value)
     {
         $url = $this->amoSettings->amo_portal . "/api/v4/contacts?query=$value";
-
-        // $response = $this->execute();
+        $this->curl->setOptions([
+            CURLOPT_URL=>$url,
+        ]);
+        $this->curl->setHeaders($this->headers);
+        $this->curl->isSslVerify();
+            // $response = $this->execute();
 
         return $response ?? [];
     }
@@ -40,7 +44,7 @@ class Contacts extends Model
         $url = $this->amoSettings->amo_portal . '/api/v4/contacts';
 
         $data = $this->prepareData($data);
-        
+
     }
 
     private function prepareData(array $data)

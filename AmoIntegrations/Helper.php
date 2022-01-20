@@ -30,4 +30,5 @@ trait Helper
         $response = $curl->execute();
         return $response;
     }
+    
 }
