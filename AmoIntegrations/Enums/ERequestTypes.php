@@ -1,6 +1,6 @@
 <?php
 
-namespace AmoIntegrations;
+namespace AmoIntegrations\Enums;
 
 class ERequestTypes
 {

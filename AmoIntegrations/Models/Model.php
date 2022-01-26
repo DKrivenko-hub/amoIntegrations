@@ -3,32 +3,39 @@
 namespace AmoIntegrations\Models;
 
 use AmoIntegrations\AmoSettings;
-use \AmoIntegrations\Curl;
-use \AmoIntegrations\ERequestTypes;
+use AmoIntegrations\Curl;
 
 class Model
 {
 
-    protected Curl $curl;
+    protected $connect;
 
     protected AmoSettings $amoSettings;
 
-    protected $headers;
-
+    protected $headers = [];
 
     public function __construct()
     {
-        $this->curl = Curl::getInstance();
+        $this->connection = Curl::getInstance();
+
         $this->amoSettings = AmoSettings::getInstance();
 
         $this->headers = [
             'Authorization: Bearer ' . $this->amoSettings->access_token,
             'Content-Type:application/json'
         ];
-
-        // $this->curl->setHeaders($this->headers);
     }
 
+    protected function setDefaultOptions()
+    {
+        $this->connection->setOptions([
+            CURLOPT_USERAGENT => 'amoCRM-oAuth-client/1.0',
+        ]);
+
+        $this->connection->setHeaders($this->headers);
+
+        $this->connection->isSslVerify();
+    }
 
     protected function fixNullFields($data)
     {

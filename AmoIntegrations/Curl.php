@@ -4,25 +4,33 @@
 namespace AmoIntegrations;
 
 use CurlHandle;
+use AmoIntegrations\Enums\ERequestTypes;
+
 
 class Curl
 {
     use Helper;
 
     private CurlHandle $connect;
-    private $last_action ='';
+    private string $last_action = '';
+    private AmoSettings $amoSettings;
 
     private static $instance;
 
     private array $default_options = [
         CURLOPT_RETURNTRANSFER => false,
-        CURLOPT_HEADER => true
+        CURLOPT_HEADER => false,
+        CURLOPT_SSL_VERIFYHOST => 1,
+        CURLOPT_SSL_VERIFYPEER => 2,
+
     ];
 
     private array $client_options = [];
 
+
     private function __construct()
     {
+        $this->amoSettings = AmoSettings::getInstance();
         $this->connect = curl_init();
     }
 
@@ -71,14 +79,6 @@ class Curl
         return false;
     }
 
-    public function isSslVerify(bool $isSslVerify = false)
-    {
-        if (!$isSslVerify) {
-            $this->default_options[CURLOPT_SSL_VERIFYHOST] = false;
-            $this->default_options[CURLOPT_SSL_VERIFYPEER] = false;
-        }
-    }
-
     public function execute(): array
     {
         $options = $this->default_options;
@@ -104,7 +104,7 @@ class Curl
     }
 
 
-    protected function processResponse($response)
+    public function processResponse($response)
     {
         $code = (int)$response['code'];
         $errors = [
@@ -126,7 +126,7 @@ class Curl
             $error = "\r\n------------------------" . date('d.m.Y H:i:s') . "--------------------\r\n" . 'data: ' . json_encode($response['out']) . "\r\n action: " . $this->last_action . "response: " . $e->getMessage() . " code: $code \r\n\r\n\r\n";
             file_put_contents(__DIR__ . '/debug.log', $error, FILE_APPEND);
             sendTgMessage($error);
-            die();
+            throw $e;
         }
         return $response;
     }
@@ -136,8 +136,9 @@ class Curl
         curl_close($this->connect);
     }
 
-    public static function getInstance(){
-        if(is_null(self::$instance)){
+    public static function getInstance()
+    {
+        if (is_null(self::$instance)) {
             self::$instance = new Curl();
         }
         return self::$instance;
