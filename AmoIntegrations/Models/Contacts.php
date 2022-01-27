@@ -13,10 +13,13 @@ class Contacts extends Model
         parent::__construct();
     }
 
-    public function find(string $value)
+    public function find(?string $value)
     {
-        $value = SafeString($value);
-        $url = $this->amoSettings->amo_portal . "/api/v4/contacts?query=$value";
+        $url = $this->amoSettings->amo_portal . "/api/v4/contacts";
+        if($value){
+            $value = $this->SafeString($value);
+            $url .="?query=$value"; 
+        }
         $this->connection->setOptions([
             CURLOPT_URL => $url,
         ]);
@@ -58,15 +61,15 @@ class Contacts extends Model
         $this->connection->setData($amo_data, ERequestTypes::PATCH);
 
         $response = $this->connection->execute();
-
-        return $response ?? [];
+        // var_dump($response['response']);
+        return isset($response['response']) ? json_decode($response['response']) : [];
     }
 
     public function add(array $data)
     {
         $url = $this->amoSettings->amo_portal . '/api/v4/contacts';
 
-        $amo_data = $this->prepareData($data);
+        $amo_data[0] = $this->prepareData($data);
 
         $this->connection->setOptions([
             CURLOPT_URL => $url,
@@ -78,17 +81,17 @@ class Contacts extends Model
 
         $response = $this->connection->execute();
 
-        return $response ?? [];
+        return isset($response['response']) ? json_decode($response['response']) : [];
     }
 
     private function prepareData(array $data)
     {
         $amo_data = [];
         if (isset($data['responsible_user_id'])) {
-            $amo_data[0]['responsible_user_id'] = $data['responsible_user_id'];
+            $amo_data['responsible_user_id'] = $data['responsible_user_id'];
         }
-        $amo_data[0]['name'] = ($data['values']['name'] ? $data['values']['name'] : $data['values']['phone']);
-        $amo_data[0]['custom_fields_values'] = [];
+        $amo_data['name'] = ($data['name'] ? $data['name'] : $data['phone']);
+        $amo_data['custom_fields_values'] = [];
         foreach ($this->amoSettings->contacts['cfv'] as $field_type => $cflds) {
             switch ($field_type) {
                 case 'enums':
@@ -111,7 +114,7 @@ class Contacts extends Model
                 }
 
                 if ($value) {
-                    $leads_data[0]['custom_fields_values'][] = array(
+                    $amo_data['custom_fields_values'][] = array(
                         'field_id' => (int)$f_id,
                         'values' => array(
                             array(
@@ -122,6 +125,7 @@ class Contacts extends Model
                 }
             }
         }
+
         return $amo_data;
     }
 }

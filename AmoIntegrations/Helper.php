@@ -21,7 +21,7 @@ trait Helper
             "text"       => $text
         ], JSON_UNESCAPED_SLASHES), ERequestTypes::POST);
 
-        $this->curl->SetOptions(
+        $curl->SetOptions(
             [
                 CURLOPT_URL => $url,
                 CURLOPT_HTTPHEADER => ["Content-Type: application/json"],

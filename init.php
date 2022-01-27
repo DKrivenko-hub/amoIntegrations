@@ -4,7 +4,7 @@ global $domain;
 
 if (isset($_GET['domain'])) {
     switch ($_GET['domain']) {
-        case 'server11.pp.ua':
+        case 'server111.pp.ua':
             $domain = 'server111.pp.ua';
             define('AMO_DOMAIN_PATH', __DIR__ . '/domains/sites/server111.pp.ua');
             break;

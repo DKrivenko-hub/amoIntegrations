@@ -13,10 +13,13 @@ class Leads extends Model
         parent::__construct();
     }
 
-    public function find(string $value)
+    public function find(string $value = null)
     {
-        $value = SafeString($value);
-        $url = $this->amoSettings->amo_portal . "/api/v4/leads?query=$value";
+        $url = $this->amoSettings->amo_portal . "/api/v4/leads";
+        if ($value) {
+            $value = SafeString($value);
+            $url .= "?query=$value";
+        }
         $this->connection->setOptions([
             CURLOPT_URL => $url,
         ]);
@@ -48,7 +51,7 @@ class Leads extends Model
         $url = $this->amoSettings->amo_portal . "/api/v4/leads/$id";
 
         $amo_data = $this->prepareData($data);
-
+        var_dump($amo_data);
         $this->connection->setOptions([
             CURLOPT_URL => $url,
         ]);
@@ -66,7 +69,7 @@ class Leads extends Model
     {
         $url = $this->amoSettings->amo_portal . '/api/v4/leads';
 
-        $amo_data = $this->prepareData($data);
+        $amo_data[0] = $this->prepareData($data);
 
         $this->connection->setOptions([
             CURLOPT_URL => $url,
@@ -85,18 +88,17 @@ class Leads extends Model
     {
         $pipeline = $this->amoSettings->getPipeline($data['pipeline_name']);
 
-        $leads_data = array();
-        $leads_data[0]['name'] = ($data['values']['name'] ? $data['values']['name'] . ' ' . $data['values']['phone'] : $data['values']['phone']);
+        $amo_data = array();
+        $amo_data['name']  = ($data['name'] ? $data['name'] . ' ' . $data['phone'] : $data['phone']);     
+        
+        $amo_data['pipeline_id'] = (int)$pipeline['pipeline_id'];
 
-        $leads_data[0]['pipeline_id'] = (int)$pipeline['pipeline_id'];
-
-        $amo_data = [];
         if (isset($data['responsible_user_id'])) {
-            $amo_data[0]['responsible_user_id'] = $data['responsible_user_id'];
+            $amo_data['responsible_user_id'] = $data['responsible_user_id'];
         }
 
         if (isset($data['lead_price'])) {
-            // $leads_data['price'] = (int)$data['lead_price'];
+            $amo_data['price'] = (int)$data['lead_price'];
         }
 
         if (count($this->amoSettings->leads['cfv'])) {
@@ -126,7 +128,7 @@ class Leads extends Model
                         }
 
                         if ($value) {
-                            $leads_data[0]['custom_fields_values'][] = array(
+                            $amo_data['custom_fields_values'][] = array(
                                 'field_id' => (int)$f_id,
                                 'values' => array(
                                     array(
@@ -143,12 +145,12 @@ class Leads extends Model
         if (isset($data['tag_name'])) {
             if (is_array($data['tag_name'])) {
                 foreach ($data['tag_name'] as $tag) {
-                    $leads_data[0]['_embedded']['tags'][] = array(
+                    $amo_data[0]['_embedded']['tags'][] = array(
                         'name' => $tag
                     );
                 }
             } else {
-                $leads_data[0]['_embedded'] = array(
+                $amo_data['_embedded'] = array(
                     'tags' => array(
                         array(
                             'name' => $data['tag_name']
@@ -157,7 +159,7 @@ class Leads extends Model
                 );
             }
         } else {
-            $leads_data[0]['_embedded'] = array(
+            $amo_data['_embedded'] = array(
                 'tags' => array(
                     array(
                         'name' => 'заявка с сайта'
@@ -165,7 +167,6 @@ class Leads extends Model
                 )
             );
         }
-
         return $amo_data;
     }
 }

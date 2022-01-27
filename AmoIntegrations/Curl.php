@@ -12,13 +12,15 @@ class Curl
     use Helper;
 
     private CurlHandle $connect;
-    private string $last_action = '';
+
     private AmoSettings $amoSettings;
+
+    private string $last_action = '';
 
     private static $instance;
 
     private array $default_options = [
-        CURLOPT_RETURNTRANSFER => false,
+        CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HEADER => false,
         CURLOPT_SSL_VERIFYHOST => 1,
         CURLOPT_SSL_VERIFYPEER => 2,
@@ -34,16 +36,16 @@ class Curl
         $this->connect = curl_init();
     }
 
-    public function setOptions(array $options)
+    public function SetOptions(array $options)
     {
         if (!empty($options)) {
-            $this->client_options = $this->client_options + $options;
+            $this->client_options = $options + $this->client_options;
             return true;
         }
         return false;
     }
 
-    public function setTypeRequest(string $requestType)
+    public function SetTypeRequest(string $requestType)
     {
         $requestType = ERequestTypes::get($requestType);
         if (!empty($requestType) && $requestType !== 'GET') {
@@ -53,7 +55,7 @@ class Curl
         return false;
     }
 
-    public function setHeaders(array $headers)
+    public function SetHeaders(array $headers)
     {
         if (!empty($headers)) {
             $this->client_options[CURLOPT_HTTPHEADER] = $headers;
@@ -83,19 +85,23 @@ class Curl
         $options = $this->default_options;
 
         if (!empty($this->client_options)) {
-            $options = $this->default_options + $this->client_options;
+            $options =  $this->client_options + $this->default_options;
         }
 
         if (!isset($options[CURLOPT_URL])) {
-            throw new \Exception('empty url', 0);
+            throw new \Exception('empty url');
         }
+
         $this->last_action = $options[CURLOPT_URL];
 
         curl_setopt_array($this->connect, $options);
 
         $out = curl_exec($this->connect);
 
-        $response =  ['response' => $out, 'code' => curl_getinfo($this->connect, CURLINFO_RESPONSE_CODE)];
+        $response =  [
+            'response' => $out,
+            'code' => curl_getinfo($this->connect, CURLINFO_RESPONSE_CODE)
+        ];
 
         curl_reset($this->connect);
 
@@ -135,7 +141,11 @@ class Curl
         curl_close($this->connect);
     }
 
-    public static function getInstance()
+
+    /** 
+     *  @return Curl
+     **/
+    public static function getInstance(): Curl
     {
         if (is_null(self::$instance)) {
             self::$instance = new Curl();

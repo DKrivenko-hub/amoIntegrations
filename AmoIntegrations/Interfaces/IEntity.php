@@ -1,7 +1,8 @@
-<?php 
+<?php
 
 namespace AmoIntegrations\Interfaces;
 
-interface IEntity{
-    
+interface IEntity
+{
+    public function find($value);
 }

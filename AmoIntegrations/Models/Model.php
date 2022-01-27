@@ -33,8 +33,6 @@ class Model
         ]);
 
         $this->connection->setHeaders($this->headers);
-
-        $this->connection->isSslVerify();
     }
 
     protected function fixNullFields($data)
