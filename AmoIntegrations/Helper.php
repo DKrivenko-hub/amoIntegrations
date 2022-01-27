@@ -118,4 +118,20 @@ trait Helper
 
         $amoSettings->writeConfigs();
     }
+
+    public function getDirs($parent_dir)
+    {
+        $dir_key = basename($parent_dir);
+        $result = [];
+        foreach (scandir($parent_dir) as $filename) {
+            if ($filename[0] === '.') continue;
+            $filePath = $parent_dir . '/' . $filename;
+            if (is_dir($filePath)) {
+                $result[$dir_key][$filename] = $this->getDirs($filePath)[$filename];
+            } else {
+                $result[$dir_key][] = $filename;
+            }
+        }
+        return $result;
+    }
 }

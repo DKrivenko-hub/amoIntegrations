@@ -5,6 +5,8 @@ namespace AmoIntegrations;
 
 class AmoSettings
 {
+    use Helper;
+
     private $client_id = '';
     private $client_secret = '';
 
@@ -29,10 +31,25 @@ class AmoSettings
 
     private static $instance;
 
-    public function __construct($path = '')
+    public function __construct()
     {
-        global $domain;
-        $this->path = $path ?? AMO_INTEGRATIONS_PATH . '/' . $domain . '/amoConfigs.json';
+        if (defined('AMO_DOMAIN_PATH')) {
+            $this->path = AMO_DOMAIN_PATH . '/amoConfigs.json';
+        } else {
+            global $domain;
+            $dirs = $this->getDirs($_SERVER['DOCUMENT_ROOT'] . '/domains');
+            foreach ($dirs as $site_type => $sites) {
+                foreach ($sites as $path => $site) {
+                    if (
+                        strpos($path, $domain) !== false &&
+                        ($key = array_search('amoConfigs.json', $site)) !== false
+                    ) {
+                        $this->path = $_SERVER['DOCUMENT_ROOT'] . "/$site_type/$path/$site[$key]";
+                        break 2;
+                    }
+                }
+            }
+        }
         $this->readConfigs();
     }
     function __get($name)
@@ -63,7 +80,6 @@ class AmoSettings
 
     public function readConfigs()
     {
-
         if (file_exists($this->path)) {
             $configs = file_get_contents($this->path);
             if ($configs) {
@@ -108,10 +124,10 @@ class AmoSettings
         }
     }
 
-    public static function getInstance($path = '')
+    public static function getInstance()
     {
         if (empty(self::$instance)) {
-            self::$instance = new AmoSettings($path);
+            self::$instance = new AmoSettings();
         }
         return self::$instance;
     }

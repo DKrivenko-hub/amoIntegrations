@@ -1,46 +1,34 @@
 <?php
 
-
 global $domain;
-
 
 if (isset($_GET['domain'])) {
     switch ($_GET['domain']) {
-        case 'maksbartko.com.ua':
-        case 'maksbartko':
-            $domain = 'maksbartko.com.ua';
-            $path = 'domains/maksbartko.com.ua';
-            break;
-        case 'kiev.logicaschool.com':
-            $domain = $_GET['domain'];
-            $path = 'marquiz/' . $_GET['domain'];
-            break;
-        case 'egolist':
-            $domain = $_GET['domain'];
-            $path = 'binotel/' . $_GET['domain'];
-            break;
-        case 'zona-comforta.in.ua':
-        case 'freshcode.training':
-        case 'glassmtech':
-            $domain = $_GET['domain'];
-            $path = 'domains/' . $_GET['domain'];
+        case 'server11.pp.ua':
+            $domain = 'server111.pp.ua';
+            define('AMO_DOMAIN_PATH', __DIR__ . '/domains/sites/server111.pp.ua');
             break;
     }
 }
-include_once __DIR__ . '/functions.php';
 
-if (strpos($_SERVER['HTTP_REFERER'], '/domains/') === FALSE) {
-    if (!isset($domain) || empty($domain)) {
+require_once __DIR__ . '/AmoIntegrations/AmoAutoload.php';
+
+if (!isset($domain) || empty($domain)) {
+    $request_uri = explode('/', $_SERVER['REQUEST_URI']);
+    array_pop($request_uri);
+    $request_uri = implode('/', $request_uri);
+    if ($request_uri) {
+        $domain = basename($request_uri);
+        define('AMO_DOMAIN_PATH', __DIR__ . $request_uri);
+    } else {
         echo 'Incorrect domain';
         exit;
-    } else if (!file_exists(AMO_INTEGRATIONS_PATH .'/' . $path . '/amoConfigs.json')) {
-        echo 'Configs not exists';
-        exit;
     }
 }
 
+
 try {
-   $amoSettings = \AmoIntegrations\AmoSettings::getInstance(AMO_INTEGRATIONS_PATH .'/' . $path . '/amoConfigs.json');
+    $amoSettings = \AmoIntegrations\AmoSettings::getInstance();
 } catch (\Throwable $th) {
     throw new ErrorException('config not exists');
 }

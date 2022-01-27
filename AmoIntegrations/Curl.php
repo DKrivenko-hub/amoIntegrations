@@ -37,8 +37,7 @@ class Curl
     public function setOptions(array $options)
     {
         if (!empty($options)) {
-            $this->client_options = array_merge($this->client_options, $options);
-
+            $this->client_options = $this->client_options + $options;
             return true;
         }
         return false;
@@ -84,7 +83,7 @@ class Curl
         $options = $this->default_options;
 
         if (!empty($this->client_options)) {
-            $options = array_merge($this->default_options, $this->client_options);
+            $options = $this->default_options + $this->client_options;
         }
 
         if (!isset($options[CURLOPT_URL])) {
@@ -123,9 +122,9 @@ class Curl
                 throw new \Exception(isset($errors[$code]) ? $errors[$code] : 'Undefined error', $code);
             }
         } catch (\Throwable $e) {
-            $error = "\r\n------------------------" . date('d.m.Y H:i:s') . "--------------------\r\n" . 'data: ' . json_encode($response['out']) . "\r\n action: " . $this->last_action . "response: " . $e->getMessage() . " code: $code \r\n\r\n\r\n";
+            $error = "\r\n------------------------" . date('d.m.Y H:i:s') . "--------------------\r\n" . 'data: ' . json_encode($response['response']) . "\r\n action: " . $this->last_action . "response: " . $e->getMessage() . " code: $code \r\n\r\n\r\n";
             file_put_contents(__DIR__ . '/debug.log', $error, FILE_APPEND);
-            sendTgMessage($error);
+            $this->sendTgMessage($error);
             throw $e;
         }
         return $response;
