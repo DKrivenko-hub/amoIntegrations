@@ -13,10 +13,10 @@ trait Helper
         $text = $message;
 
         $curl = Curl::getInstance();
-        $url  = 'https://api.telegram.org/bot879352609:AAGnLbCX4watFtnWWQPzPLVKS8fb76KIH2A/sendMessage';
+        $url  = 'https://api.telegram.org/bot111111111111/sendMessage';
 
         $curl->SetData(json_encode([
-            "chat_id"    => "-758415180",
+            "chat_id"    => "-1111111111",
             "parse_mode" => 'html',
             "text"       => $text
         ], JSON_UNESCAPED_SLASHES), ERequestTypes::POST);
@@ -85,37 +85,6 @@ trait Helper
         return Trim($data);
     }
 
-    public function getAccessToken()
-    {
-        $curl = Curl::getInstance();
-
-        $amoSettings = AmoSettings::getInstance();
-
-        $curl->SetOptions([
-            CURLOPT_URL => $amoSettings->amo_portal . '/oauth2/access_token',
-            CURLOPT_USERAGENT => 'amoCRM-oAuth-client/1.0',
-            CURLOPT_HTTPHEADER => [
-                'Content-Type:application/json'
-            ]
-        ]);
-
-        $curl->SetData([
-            'client_id' => $amoSettings->client_id,
-            'client_secret' => $amoSettings->client_secret,
-            'grant_type' => 'refresh_token',
-            'refresh_token' => $amoSettings->refresh_token,
-        ], ERequestTypes::POST);
-
-        $response = $curl->execute();
-
-        $amoSettings->refresh_token = $response['response']['refresh_token'];
-        $amoSettings->access_token = $response['response']['access_token'];
-        $amoSettings->token_type = $response['response']['token_type'];
-
-        $amoSettings->setExpires((int)$response['response']['expires_in']);
-
-        $amoSettings->writeConfigs();
-    }
 
     public function getDirs($parent_dir)
     {
