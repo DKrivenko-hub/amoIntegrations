@@ -2,33 +2,35 @@
 
 namespace AmoIntegrations\Models;
 
+use AmoIntegrations\Helper;
+use AmoIntegrations\Collections\{Contacts as CollectionsContacts, AmoCollection};
 use \AmoIntegrations\Enums\ERequestTypes;
 
 class Contacts extends Model
 {
-    use \AmoIntegrations\Helper;
+    use Helper;
 
     public function __construct()
     {
         parent::__construct();
     }
 
-    public function find(?string $value)
+    public function find(string $value = '')
     {
         $url = $this->amoSettings->amo_portal . "/api/v4/contacts";
-        if($value){
+        if ($value) {
             $value = $this->SafeString($value);
-            $url .="?query=$value"; 
+            $url .= "?query=$value";
         }
-        $this->connection->setOptions([
+        $this->connection->SetOptions([
             CURLOPT_URL => $url,
         ]);
 
         $this->setDefaultOptions();
 
         $response = $this->connection->execute();
-
-        return $response ?? [];
+        $collection = new AmoCollection('Contacts', $response['response']);
+        return $collection ?? [];
     }
 
     public function findById(int $id)
@@ -43,7 +45,8 @@ class Contacts extends Model
 
         $response = $this->connection->execute();
 
-        return $response ?? [];
+        $collection = new CollectionsContacts(json_decode($response['response'], true));
+        return $collection ?? [];
     }
 
     public function update(int $id, array $data)
@@ -61,8 +64,10 @@ class Contacts extends Model
         $this->connection->setData($amo_data, ERequestTypes::PATCH);
 
         $response = $this->connection->execute();
-        // var_dump($response['response']);
-        return isset($response['response']) ? json_decode($response['response']) : [];
+
+        $collection = new CollectionsContacts(json_decode($response['response'], true));
+
+        return $collection ?? [];
     }
 
     public function add(array $data)
@@ -81,7 +86,9 @@ class Contacts extends Model
 
         $response = $this->connection->execute();
 
-        return isset($response['response']) ? json_decode($response['response']) : [];
+        $collection = new CollectionsContacts(json_decode($response['response'], true));
+
+        return $collection ?? [];
     }
 
     private function prepareData(array $data)

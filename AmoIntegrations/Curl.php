@@ -24,7 +24,6 @@ class Curl
         CURLOPT_HEADER => false,
         CURLOPT_SSL_VERIFYHOST => 1,
         CURLOPT_SSL_VERIFYPEER => 2,
-
     ];
 
     private array $client_options = [];
@@ -45,10 +44,10 @@ class Curl
         return false;
     }
 
-    public function SetTypeRequest(string $requestType)
+    public function SetTypeRequest(ERequestTypes $requestType)
     {
-        $requestType = ERequestTypes::get($requestType);
-        if (!empty($requestType) && $requestType !== 'GET') {
+        $requestType = $requestType->value;
+        if ($requestType !== 'GET') {
             $this->client_options[CURLOPT_CUSTOMREQUEST] = $requestType;
             return true;
         }
@@ -64,14 +63,14 @@ class Curl
         return false;
     }
 
-    public function SetData($data, ?string $requestType)
+    public function SetData($data, ERequestTypes $requestType = null)
     {
         if (!empty($data)) {
             if (!empty($requestType)) {
-                $requestType = ERequestTypes::get($requestType);
+                $requestType = $requestType->value;
             }
             if (empty($requestType)) {
-                $requestType = ERequestTypes::POST;
+                $requestType = ERequestTypes::POST->value;
             }
             $this->client_options[CURLOPT_CUSTOMREQUEST] = $requestType;
             $this->client_options[CURLOPT_POSTFIELDS] = !is_string($data) ? json_encode($data) : $data;

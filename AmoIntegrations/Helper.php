@@ -75,7 +75,6 @@ trait Helper
 
         $data = Str_Replace($search, $replace, Trim($data));
 
-
         if ($limit > 0) {
             $data = SubStr($data, 0, $limit);
         }
@@ -83,7 +82,6 @@ trait Helper
         if ($noTags != FALSE) {
             $data = Strip_Tags($data);
         }
-
         return Trim($data);
     }
 

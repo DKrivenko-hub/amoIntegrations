@@ -96,6 +96,7 @@ class AmoSettings
             }
         }
     }
+    
     public function setExpires(int $timestamp)
     {
 
@@ -130,6 +131,7 @@ class AmoSettings
             self::$instance = new AmoSettings();
         }
         return self::$instance;
+		
     }
     public function destruct()
     {

@@ -2,7 +2,10 @@
 
 namespace AmoIntegrations\Models;
 
+use AmoIntegrations\Collections\AmoCollection;
+use AmoIntegrations\Collections\Leads as CollectionsLeads;
 use \AmoIntegrations\Enums\ERequestTypes;
+use AmoIntegrations\Interfaces\IEntity;
 
 class Leads extends Model
 {
@@ -20,15 +23,15 @@ class Leads extends Model
             $value = SafeString($value);
             $url .= "?query=$value";
         }
-        $this->connection->setOptions([
+        $this->connection->SetOptions([
             CURLOPT_URL => $url,
         ]);
 
         $this->setDefaultOptions();
 
         $response = $this->connection->execute();
-
-        return $response ?? [];
+        $collection = new AmoCollection('Leads', $response);
+        return $collection ?? [];
     }
 
     public function findById(int $id)
@@ -42,8 +45,8 @@ class Leads extends Model
         $this->setDefaultOptions();
 
         $response = $this->connection->execute();
-
-        return $response ?? [];
+        $collection = new CollectionsLeads(json_decode($response['response'], true));
+        return $collection ?? [];
     }
 
     public function update(int $id, array $data)
@@ -51,7 +54,7 @@ class Leads extends Model
         $url = $this->amoSettings->amo_portal . "/api/v4/leads/$id";
 
         $amo_data = $this->prepareData($data);
-        var_dump($amo_data);
+
         $this->connection->setOptions([
             CURLOPT_URL => $url,
         ]);
@@ -62,35 +65,49 @@ class Leads extends Model
 
         $response = $this->connection->execute();
 
-        return $response ?? [];
+        $collection = new CollectionsLeads(json_decode($response['response'], true));
+        return $collection ?? [];
     }
 
-    public function add(array $data)
+    public function add(array $data, IEntity $contact)
     {
         $url = $this->amoSettings->amo_portal . '/api/v4/leads';
 
-        $amo_data[0] = $this->prepareData($data);
+        $amo_data = $this->prepareData($data);
 
-        $this->connection->setOptions([
-            CURLOPT_URL => $url,
-        ]);
+        $pipeline = $this->amoSettings->getPipeline($data['pipeline_name']);
 
-        $this->setDefaultOptions();
+        //Если нет ай ди статуса в файле настроек, то лид падает в неразобранное
+        if (!(int)$pipeline['status_id']) {
+            $MIncomeLeads = new IncomingLeads();
 
-        $this->connection->setData($amo_data, ERequestTypes::POST);
+            $collection = $MIncomeLeads->addUnsortedForm($data, $contact, $amo_data);
+        } else {
+            $amo_data['_embedded']['contacts'][0] = $this->fixNullFields($contact);
+            $amo_data[0] = $amo_data;
 
-        $response = $this->connection->execute();
+            $this->connection->setOptions([
+                CURLOPT_URL => $url,
+            ]);
 
-        return $response ?? [];
+            $this->setDefaultOptions();
+
+            $this->connection->setData($amo_data, ERequestTypes::POST);
+
+            $response = $this->connection->execute();
+            $collection = new CollectionsLeads(json_decode($response['response'], true));
+        }
+
+        return $collection ?? [];
     }
 
-    private function prepareData(array $data)
+    public function prepareData(array $data)
     {
         $pipeline = $this->amoSettings->getPipeline($data['pipeline_name']);
 
         $amo_data = array();
-        $amo_data['name']  = ($data['name'] ? $data['name'] . ' ' . $data['phone'] : $data['phone']);     
-        
+        $amo_data['name']  = ($data['name'] ? $data['name'] . ' ' . $data['phone'] : $data['phone']);
+
         $amo_data['pipeline_id'] = (int)$pipeline['pipeline_id'];
 
         if (isset($data['responsible_user_id'])) {
